@@ -11,6 +11,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -93,7 +94,7 @@ public class KafkaDockerProducerApplication implements CommandLineRunner {
     private String getRequest(String url) throws IOException {
         StringBuilder response = new StringBuilder();
 
-        URL obj = new URL(url);
+        URL obj = URI.create(url).toURL();
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
 
         con.setRequestMethod("GET");

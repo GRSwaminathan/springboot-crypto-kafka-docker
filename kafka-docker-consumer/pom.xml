@@ -43,7 +43,7 @@
     <properties>
         <docker.maven.plugin.version>1.2.0</docker.maven.plugin.version>
         <docker.image.prefix>docker.mycompany.com</docker.image.prefix>
-        <java.version>17</java.version>
+        <java.version>25</java.version>
     </properties>
 
     <build>

@@ -22,13 +22,13 @@ public enum CryptoType {
     }
 
     static CryptoType getCryptoType(String type) {
-        switch (type.toUpperCase()) {
-            case "BTC": return CryptoType.BTC;
-            case "LTC": return CryptoType.LTC;
-            case "BCH": return CryptoType.BCH;
-            case "XRP": return CryptoType.XRP;
-            case "ETH": return CryptoType.ETH;
-            default: return CryptoType.UNKNOWN;
-        }
+        return switch (type.toUpperCase()) {
+            case "BTC" -> CryptoType.BTC;
+            case "LTC" -> CryptoType.LTC;
+            case "BCH" -> CryptoType.BCH;
+            case "XRP" -> CryptoType.XRP;
+            case "ETH" -> CryptoType.ETH;
+            default -> CryptoType.UNKNOWN;
+        };
     }
 }

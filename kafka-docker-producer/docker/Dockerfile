@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 LABEL maintainer="Wagner Franchin"
 
@@ -9,6 +9,6 @@ ENV TOPICS ""
 
 RUN apk update && apk add ca-certificates wget && update-ca-certificates
 
-ADD kafka-docker-producer*.jar /kafka-docker-producer.jar
+ADD target/kafka-docker-producer*.jar /kafka-docker-producer.jar
 
 ENTRYPOINT java -jar /kafka-docker-producer.jar $KAFKA_BOOTSTRAP_SERVER $INITIAL_DELAY $INTERVAL $TOPICS
