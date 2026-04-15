@@ -12,22 +12,21 @@ A multi-module Maven project that streams live cryptocurrency price data from th
 ## Build Commands
 
 ```bash
-# Build all modules from repo root
-./mvnw clean package
+# Build JARs + Docker images + start all services
+make up
 
-# Build Docker images (run after mvn package)
-./mvnw docker:build -pl kafka-docker-producer
-./mvnw docker:build -pl kafka-docker-consumer
+# Rebuild and hot-swap only producer/consumer containers (leaves Kafka/Loki/Grafana running)
+make rebuild
+
+# Stop all services
+make down
+
+# Tail app logs
+make logs
 
 # Run a single test class
 ./mvnw test -pl kafka-docker-consumer -Dtest=KafkaDockerConsumerApplicationTests
 ./mvnw test -pl kafka-docker-producer -Dtest=KafkaDockerProducerApplicationTests
-
-# Start all services (Kafka, UI, observability stack, producer, consumers)
-docker-compose up
-
-# Rebuild and restart containers after code changes
-docker-compose up --build
 ```
 
 ## Architecture
@@ -63,10 +62,16 @@ Messages are raw JSON strings from the Bitstamp `ticker_hour` endpoint. The cons
 
 ### Observability
 
-Both modules push traces and logs to the OTel Collector over OTLP HTTP (`otel-collector:4318`). The collector forwards to Loki. Sampling is set to 100% (`management.tracing.sampling.probability=1.0`). `logback-spring.xml` configures the `OpenTelemetryAppender`.
+Both modules push traces and logs to the OTel Collector over OTLP HTTP (`otel-collector:4318`). The collector forwards logs to Loki via the `otlp_http` exporter (not the deprecated `otlphttp`). Sampling is set to 100% (`management.tracing.sampling.probability=1.0`).
+
+`logback-spring.xml` declares the `OpenTelemetryAppender`, but it must be explicitly installed at runtime — both main classes call `OpenTelemetryAppender.install(openTelemetry)` in an `@EventListener(ApplicationStartedEvent.class)` method. Without this call, the appender is a no-op.
+
+Spring Boot's OTel auto-configuration sets `service.name` from `spring.application.name`, **not** from the `OTEL_SERVICE_NAME` environment variable (which is only used by the OTel Java agent). Each consumer container overrides this via `SPRING_APPLICATION_NAME` in `docker-compose.yml` to get distinct service names in Loki (`kafka-consumer-btc`, `kafka-consumer-ltc`).
+
+Loki datasource and the **Crypto Kafka Logs** dashboard are pre-provisioned via `grafana/provisioning/` — no manual Grafana setup needed.
 
 - Kafka UI: http://localhost:8085
-- Grafana: http://localhost:3000 (anonymous admin access)
+- Grafana: http://localhost:3000 (anonymous admin access, dashboard pre-loaded)
 - Loki: http://localhost:3100
 
 ### Docker Compose Services
@@ -82,4 +87,4 @@ Both modules push traces and logs to the OTel Collector over OTLP HTTP (`otel-co
 | `loki` | Log aggregation |
 | `grafana` | Dashboards |
 
-Producer and consumer Docker images are built via the Spotify Docker Maven Plugin and pushed to the local daemon. Base image is `eclipse-temurin:25-jre-alpine`.
+Producer and consumer Docker images are built via the Fabric8 Docker Maven Plugin and pushed to the local daemon. Base image is `eclipse-temurin:25-jre-alpine`.
