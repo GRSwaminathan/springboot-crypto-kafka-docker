@@ -2,13 +2,18 @@ package com.mycompany.kafkadockerconsumer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.event.ApplicationStartedEvent;
+import org.springframework.context.event.EventListener;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -20,8 +25,21 @@ import java.util.Arrays;
 @SpringBootApplication
 public class KafkaDockerConsumerApplication implements CommandLineRunner {
 
+    @Autowired(required = false)
+    private OpenTelemetry openTelemetry;
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private boolean stopped = false;
+
+    @EventListener(ApplicationStartedEvent.class)
+    public void installOtelAppender() {
+        if (openTelemetry != null) {
+            OpenTelemetryAppender.install(openTelemetry);
+            log.info("OpenTelemetryAppender installed");
+        } else {
+            log.warn("OpenTelemetry bean not found - logs will not be exported");
+        }
+    }
 
     public static void main(String[] args) {
         SpringApplication.run(KafkaDockerConsumerApplication.class, args);

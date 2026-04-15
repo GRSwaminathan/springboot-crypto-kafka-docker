@@ -25,6 +25,7 @@
     <properties>
         <java.version>25</java.version>
         <lombok.version>1.18.38</lombok.version>
+        <otel.instrumentation.version>2.10.0-alpha</otel.instrumentation.version>
     </properties>
 
     <build>

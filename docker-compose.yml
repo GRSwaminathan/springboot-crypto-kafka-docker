@@ -39,25 +39,65 @@ services:
       test: "wget --quiet --tries=1 --spider http://localhost:8080 || exit 1"
       start_period: 30s
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    restart: unless-stopped
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    command: [ "--config=/etc/otel-collector-config.yml" ]
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - loki
+
   consumer-btc:
     image: docker.mycompany.com/kafka-docker-consumer
     container_name: consumer-btc
     depends_on:
     - kafka-ui
+    - otel-collector
     environment:
       KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
       KAFKA_GROUP_ID: "my-group"
       TOPICS: "BTC"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      OTEL_SERVICE_NAME: "kafka-consumer-btc"
+      SPRING_APPLICATION_NAME: "kafka-consumer-btc"
 
   consumer-ltc:
     image: docker.mycompany.com/kafka-docker-consumer
     container_name: consumer-ltc
     depends_on:
     - kafka-ui
+    - otel-collector
     environment:
       KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
       KAFKA_GROUP_ID: "my-group"
       TOPICS: "LTC"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      OTEL_SERVICE_NAME: "kafka-consumer-ltc"
+      SPRING_APPLICATION_NAME: "kafka-consumer-ltc"
 
   producer:
     image: docker.mycompany.com/kafka-docker-producer:latest
@@ -65,8 +105,11 @@ services:
     depends_on:
     - consumer-btc
     - consumer-ltc
+    - otel-collector
     environment:
       KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
       INITIAL_DELAY: 30000
       INTERVAL: 3000
       TOPICS: "BTC,LTC"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      OTEL_SERVICE_NAME: "kafka-producer"

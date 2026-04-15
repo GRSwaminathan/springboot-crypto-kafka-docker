@@ -1,11 +1,16 @@
 package com.mycompany.kafkadockerproducer;
 
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.event.ApplicationStartedEvent;
+import org.springframework.context.event.EventListener;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,9 +27,22 @@ import java.util.Properties;
 @SpringBootApplication
 public class KafkaDockerProducerApplication implements CommandLineRunner {
 
+    @Autowired(required = false)
+    private OpenTelemetry openTelemetry;
+
     private KafkaProducer<String, String> kafkaProducer;
     private long interval;
     private boolean stopped = false;
+
+    @EventListener(ApplicationStartedEvent.class)
+    public void installOtelAppender() {
+        if (openTelemetry != null) {
+            OpenTelemetryAppender.install(openTelemetry);
+            log.info("OpenTelemetryAppender installed");
+        } else {
+            log.warn("OpenTelemetry bean not found - logs will not be exported");
+        }
+    }
 
     public static void main(String[] args) {
         SpringApplication.run(KafkaDockerProducerApplication.class, args);
